@@ -1,0 +1,39 @@
+<html>
+<head>
+    <title>Street Sweeping</title>
+</head>
+<body>
+<form action="" method="post" novalidate>
+    {{ form.hidden_tag() }}
+    <p>
+        {{ form.interval.label }}
+        {{ form.interval() }}
+        {% for error in form.interval.errors %}
+        <span>{{ error }}</span>
+        {% endfor %}
+    </p>
+    <p>
+        {{ form.weekday.label }}
+        {{ form.weekday() }}
+        {% for error in form.weekday.errors %}
+        <span>{{ error }}</span>
+        {% endfor %}
+    </p>
+    <p>
+        {{ form.start_time.label }}
+        {{ form.start_time() }}
+        {% for error in form.start_time.errors %}
+        <span>{{ error }}</span>
+        {% endfor %}
+    </p>
+    <p>
+        {{ form.end_time.label }}
+        {{ form.end_time() }}
+        {% for error in form.end_time.errors %}
+        <span>{{ error }}</span>
+        {% endfor %}
+    </p>
+    <button type="submit">Make .ics</button>
+</form>
+</body>
+</html>
