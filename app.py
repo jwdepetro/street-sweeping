@@ -9,6 +9,8 @@ cal = calendar.Calendar(firstweekday=calendar.SUNDAY)
 y = datetime.datetime.now().year
 m = datetime.datetime.now().month
 tz = tzlocal()
+start_time = datetime.time(9, 0, 0)
+end_time = datetime.time(12, 0, 0)
 
 # first and third tuesday of every month
 DAY_OF_WEEK = calendar.TUESDAY
@@ -25,7 +27,10 @@ def get_date(month, interval) -> datetime.datetime:
 def create_event(date) -> Event:
     e = Event()
     e.name = "Street Sweeping"
-    e.begin = date
+    start_datetime = datetime.datetime.combine(date, start_time, tz)
+    end_datetime = datetime.datetime.combine(date, end_time, tz)
+    e.begin = start_datetime
+    e.end = end_datetime
     return e
 
 
