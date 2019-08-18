@@ -20,6 +20,16 @@ class AppConfig:
     FLASK_ENV = os.environ.get('FLASK_ENV')
 
 
+def make_app():
+    app = Flask(__name__)
+    app.template_folder = '.'
+    app.config.from_object(AppConfig)
+    return app
+
+
+app = make_app()
+
+
 class StreetSweepingCalendar:
     weekday = None
     interval = []
@@ -63,7 +73,6 @@ class StreetSweepingCalendar:
                     date = self.get_date(i)
                     event = self.create_event(date)
                     self.ical.events.add(event)
-                    print(date.isoformat())
                 self.month = self.month + 1
             my_file.writelines(self.ical)
             my_file.close()
@@ -93,20 +102,9 @@ class CalenderForm(FlaskForm):
     submit = SubmitField('Create')
 
 
-def make_app():
-    app = Flask(__name__)
-    app.template_folder = '.'
-    app.config.from_object(AppConfig)
-    return app
-
-
-app = make_app()
-
-
 @app.route('/', methods=['GET', 'POST'])
 def index():
     form = CalenderForm()
-    print(form.data)
     if request.method == 'POST' and form.validate():
         cal = StreetSweepingCalendar(
             weekday=form.weekday.data,
@@ -114,9 +112,7 @@ def index():
             start_time=form.start_time.data,
             end_time=form.end_time.data
         )
-        print(cal)
         cal.make_file()
-    print(form.errors)
     return render_template('index.html', form=form)
 
 
