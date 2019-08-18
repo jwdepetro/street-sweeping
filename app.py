@@ -1,10 +1,11 @@
 import calendar
 import datetime
 import os
+import uuid
 
 from dateutil.tz import tzlocal
 from dotenv import load_dotenv
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, send_file, after_this_request
 from flask_wtf import FlaskForm
 from ics import Calendar, Event
 from wtforms import SelectField, SubmitField, TimeField
@@ -42,6 +43,12 @@ class StreetSweepingCalendar:
     ical = None
 
     def __init__(self, weekday, interval, start_time, end_time):
+        app.logger.info('initializing calendar: {}'.format({
+            'weekday': weekday,
+            'interval': interval,
+            'start_time': start_time,
+            'end_time': end_time
+        }))
         self.weekday = int(weekday)
         self.interval = [int(i) for i in interval]
         self.start_time = start_time
@@ -60,14 +67,21 @@ class StreetSweepingCalendar:
         return datetime.datetime.combine(date, time, self.tz)
 
     def create_event(self, date) -> Event:
+        begin = datetime.datetime.combine(date, self.start_time, self.tz)
+        end = datetime.datetime.combine(date, self.end_time, self.tz)
         e = Event()
         e.name = "Street Sweeping"
-        e.begin = datetime.datetime.combine(date, self.start_time, self.tz)
-        e.end = datetime.datetime.combine(date, self.end_time, self.tz)
+        e.begin = begin
+        e.end = end
+        app.logger.info('creating event: {}'.format({
+            'begin': begin.isoformat(),
+            'end': end.isoformat()
+        }))
         return e
 
     def make_file(self):
-        with open('my.ics', 'w') as my_file:
+        file_name = '{}.ics'.format(uuid.uuid4())
+        with open(file_name, 'w') as my_file:
             while self.month < 13:
                 for i in self.interval:
                     date = self.get_date(i)
@@ -112,7 +126,22 @@ def index():
             start_time=form.start_time.data,
             end_time=form.end_time.data
         )
-        cal.make_file()
+        file = cal.make_file()
+
+        @after_this_request
+        def after(response):
+            try:
+                file_name = file.name
+                app.logger.info('attempting to delete file: {}'.format(file_name))
+                file.close()
+                os.remove(os.path.abspath(file.name))
+                app.logger.info('successfully deleted file: {}'.format(file_name))
+            except Exception:
+                app.logger.exception('failed deleting file')
+            return response
+
+        return send_file(filename_or_fp=file.name, as_attachment=True, attachment_filename='street-sweeping.ics')
+
     return render_template('index.html', form=form)
 
 
