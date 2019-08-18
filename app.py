@@ -4,7 +4,7 @@ import os
 
 from dateutil.tz import tzlocal
 from dotenv import load_dotenv
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from flask_wtf import FlaskForm
 from ics import Calendar, Event
 from wtforms import SelectField, SubmitField, TimeField
@@ -14,18 +14,6 @@ from wtforms.widgets import ListWidget, CheckboxInput
 
 load_dotenv()
 
-
-# ical = Calendar()
-# cal = calendar.Calendar(firstweekday=calendar.SUNDAY)
-# y = datetime.datetime.now().year
-# m = datetime.datetime.now().month
-# tz = tzlocal()
-# start_time = datetime.time(9, 0, 0)
-# end_time = datetime.time(12, 0, 0)
-
-# first and third tuesday of every month
-# DAY_OF_WEEK = calendar.TUESDAY
-# INTERVAL = (1, 3)
 
 class AppConfig:
     SECRET_KEY = os.environ.get('APP_SECRET_KEY')
@@ -44,8 +32,8 @@ class StreetSweepingCalendar:
     ical = None
 
     def __init__(self, weekday, interval, start_time, end_time):
-        self.weekday = weekday
-        self.interval = interval
+        self.weekday = int(weekday)
+        self.interval = [int(i) for i in interval]
         self.start_time = start_time
         self.end_time = end_time
         self.year = datetime.datetime.now().year
@@ -55,7 +43,7 @@ class StreetSweepingCalendar:
         self.ical = Calendar()
 
     def get_date(self, interval) -> datetime.datetime:
-        month_cal = self.cal.monthdatescalendar(y, self.month)
+        month_cal = self.cal.monthdatescalendar(self.year, self.month)
         date = [d for week in month_cal for d in week
                 if d.weekday() == self.weekday and d.month == self.month][interval]
         time = datetime.time(8, 0, 0)
@@ -88,17 +76,16 @@ class MultiCheckboxField(SelectMultipleField):
 
 
 class CalenderForm(FlaskForm):
-    interval_choices = [(v, 'Every {} weeks'.format(v + 1)) for v in range(4)]
+    interval_choices = [(str(v), 'Every {} weeks'.format(v + 1)) for v in range(4)]
     weekday_choices = [
-        (calendar.SUNDAY, 'Sunday'),
-        (calendar.MONDAY, 'Monday'),
-        (calendar.TUESDAY, 'Tuesday'),
-        (calendar.WEDNESDAY, 'Wednesday'),
-        (calendar.THURSDAY, 'Thursday'),
-        (calendar.FRIDAY, 'Friday'),
-        (calendar.SATURDAY, 'Saturday')
+        (str(calendar.SUNDAY), 'Sunday'),
+        (str(calendar.MONDAY), 'Monday'),
+        (str(calendar.TUESDAY), 'Tuesday'),
+        (str(calendar.WEDNESDAY), 'Wednesday'),
+        (str(calendar.THURSDAY), 'Thursday'),
+        (str(calendar.FRIDAY), 'Friday'),
+        (str(calendar.SATURDAY), 'Saturday')
     ]
-    # interval = SelectMultipleField('Interval', validators=[DataRequired()], choices=interval_choices)
     interval = MultiCheckboxField('Interval', [DataRequired()], choices=interval_choices)
     weekday = SelectField('Day of week', validators=[DataRequired()], choices=weekday_choices)
     start_time = TimeField('Start Time', validators=[DataRequired()])
@@ -119,14 +106,17 @@ app = make_app()
 @app.route('/', methods=['GET', 'POST'])
 def index():
     form = CalenderForm()
-    if form.validate_on_submit():
+    print(form.data)
+    if request.method == 'POST' and form.validate():
         cal = StreetSweepingCalendar(
-            weekday=form.weekday,
-            interval=form.interval,
-            start_time=form.start_time,
-            end_time=form.end_time
+            weekday=form.weekday.data,
+            interval=form.interval.data,
+            start_time=form.start_time.data,
+            end_time=form.end_time.data
         )
+        print(cal)
         cal.make_file()
+    print(form.errors)
     return render_template('index.html', form=form)
 
 
